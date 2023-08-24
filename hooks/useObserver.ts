@@ -11,6 +11,19 @@ const useObserver = (props: Props) => {
     const { specifiedField, replacementText, className } = props;
 
     const obsRef = useRef<any>(null);
+    // 找到的目标节点
+    const elementList: any = [];
+    function traverse (element) {
+        if (element.textContent === specifiedField && element.children.length === 0) {
+            elementList.push(element);
+            return;
+        }
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const child of element.children) {
+            traverse(child);
+        }
+    }
     const init = () => {
         const body = document.getElementsByTagName('body')[0];
 
@@ -25,12 +38,17 @@ const useObserver = (props: Props) => {
                         // 获取要修改的元素
                         const target = addedNode.getElementsByClassName(className)[0];
                         // 节点存在并且没有被替换为目标文本时
-                        if (target && !target.innerHTML.includes(replacementText)) {
+                        if (target && !target.textContent.includes(replacementText)) {
                             // 修改内容
-                            const updatedHTML = target.innerHTML.replace(specifiedField, replacementText);
-                            target.innerHTML = updatedHTML;
-                            // 替换完毕关闭检测
+                            traverse(target); // 找到所有最子级的目标元素
+                            // 对所有找到的元素进行替换
+                            elementList.forEach(element => {
+                                const current = element;
+                                const updatedText = element.textContent.replace(specifiedField, replacementText);
+                                current.textContent = updatedText;
+                            });
                             obsRef.current.disconnect();
+                            return;
                         }
                     }
                 }
@@ -47,9 +65,9 @@ const useObserver = (props: Props) => {
     useEffect(() => {
         init();
         return () => {
-          obsRef.current.disconnect();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+            obsRef.current.disconnect();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 };
 
